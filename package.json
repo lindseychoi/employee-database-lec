@@ -1,0 +1,27 @@
+{
+  "name": "employee-database-lec",
+  "version": "1.0.0",
+  "description": "employee database that uses mySQL and inquirer",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lindseychoi/employee-database-lec.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/lindseychoi/employee-database-lec/issues"
+  },
+  "homepage": "https://github.com/lindseychoi/employee-database-lec#readme",
+  "dependencies": {
+    "console.table": "^0.10.0",
+    "express": "^4.17.3",
+    "inquirer": "^8.2.1",
+    "mysql2": "^2.3.3"
+  }
+}
