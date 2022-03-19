@@ -8,6 +8,11 @@ const inquirer = require('inquirer');
 const PORT = process.env.PORT || 3001;
 const app = express();
 
+//MIDDLEWARE////////////////////////////////////////////////////////////////
+
+app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
+
 //GLOBAL VARIABLES//////////////////////////////////////////////////////////
 
 let firstQuestion = [
@@ -15,7 +20,7 @@ let firstQuestion = [
   type: 'list',
   message: 'What would you like to do?',
   name: 'whatToDo',
-  choices: ["View all departments", "View all roles", "View all employees", "Add a department", "Add a role", "Add an employee", "Update an employee role"]
+  choices: ["View all departments", "View all roles", "View all employees", "Add a department", "Add a role", "Add an employee", "Update an employee role", "Exit"]
   }
 ]
 
@@ -26,12 +31,6 @@ let deptAddition = [
   name: 'newDept',
   }
 ]
-
-
-//MIDDLEWARE////////////////////////////////////////////////////////////////
-
-app.use(express.urlencoded({ extended: false }));
-app.use(express.json());
 
 //CONNECTOR INFORMATION/////////////////////////////////////////////////////
 
@@ -46,58 +45,64 @@ const db = mysql.createConnection(
   );
 
 //QUERIES AND FUNCTIONS//////////////////////////////////////////////////////
-async function mainFunction() {
-  askQuestions();
+async function main() {
+  while (true) {
+    await askQuestions();
+  }
 };
 
 async function askQuestions() {
 
   let answer = await inquirer.prompt(firstQuestion); 
   let userAnswer = answer.whatToDo;
-    if (userAnswer === "View all departments") {
-      viewDepts();
-      } else if (userAnswer === "View all roles") {
-        viewRoles();
-        } else if (userAnswer === "View all employees") {
-          viewEmployee();
-
-          } else if (userAnswer === "Add a department") {
-            let addDeptAnswer = await inquirer.prompt(deptAddition);
-            let deptInfo = addDeptAnswer.newDept;
-            addDept(deptInfo);
-          } 
+  if (userAnswer === "View all departments") {
+    viewDepts();
+  } 
+  else if (userAnswer === "View all roles") {
+    viewRoles();
+  } 
+  else if (userAnswer === "View all employees") {
+    viewEmployee();
+  } 
+  else if (userAnswer === "Add a department") {
+    let addDeptAnswer = await inquirer.prompt(deptAddition);
+    let deptInfo = addDeptAnswer.newDept;
+    addDept(deptInfo);
+  }
+  else if (userAnswer === "Exit") {
+    process.exit(0);
+  }
 };
 
-// async function addNewDepartment() {
-//   let answer = await inquirer.prompt(deptAddition);
-//   let userAnswer = await answer.newDept;
-//   if (userAnswer === "Add a department") {
-//     let deptInfo = deptAddition.newDept;
-//     addDept(deptInfo);
-//   } 
-// }
+function renderConsoleTableResults(results) {
+  console.clear();
+  console.table(results);
+  console.log("Press the up or down arrow to continue!");
+  process.stdin.setRawMode(true);
+  process.stdin.resume();
+}
 
 async function viewDepts() {
   db.query('SELECT * FROM department', function (err, results) {
-    console.table(results);
+    renderConsoleTableResults(results)
   });
 };
 
 async function viewRoles() {
   db.query('SELECT * FROM roles', function (err, results) {
-    console.table(results);
+    renderConsoleTableResults(results)
   });
 };
 
 async function viewEmployee() {
   db.query('SELECT * FROM employee', function (err, results) {
-    console.table(results);
+    renderConsoleTableResults(results)
   });
 };
 
 async function addDept(deptInfo) {
-  db.query(`INSERT ${deptInfo} FROM employee`, function (err, results) {
-    console.table(results);
+  db.query(`INSERT ${deptInfo} INTO employee`, function (err, results) {
+    renderConsoleTableResults(results)
   });
 };
 
@@ -113,7 +118,7 @@ app.listen(PORT, () =>
 );
 
 //LOGIC//////////////////////////////////////////////////////////////////////
-mainFunction();
+main();
 
 
 //NOTES FOR LATER////////////////////////////////////////////////////////////
