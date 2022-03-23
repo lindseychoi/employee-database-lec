@@ -32,6 +32,24 @@ let deptAddition = [
   }
 ]
 
+let rolesAddition = [
+  {
+  type: 'input',
+  message: 'Please add the name of the new role:',
+  name: 'newRolesTitle',
+  },
+  {
+  type: 'input',
+  message: 'What is the salary for this new role?',
+  name: 'newRolesSalary',
+  },
+  {
+  type: 'list',
+  message: 'What department does this role belong to?',
+  name: 'newRolesDept',
+  }
+]
+
 let employeeAddition = [
   {
   type: 'input',
@@ -103,6 +121,13 @@ async function askQuestions() {
     let employeeInfo = addEmployeeAnswer;
     addEmployee(employeeInfo);
   }
+  else if (userAnswer === "Add a role") {
+    updateDeptList();
+    let addRolesAnswer = await inquirer.prompt(rolesAddition);
+    let rolesInfo = addRolesAnswer;
+    console.log("you are at the else if in the askQuestions function");
+    addRoles(rolesInfo);
+  }
   else if (userAnswer === "Exit") {
     process.exit(0);
   }
@@ -141,6 +166,21 @@ async function addDept(deptInfo) {
   });
 };
 
+async function addRoles(rolesInfo) {
+  let deptsID = await db.promise().query(`SELECT id FROM department WHERE title='${rolesInfo.newRolesDept}'`);
+  deptsID = deptsID[0][0].id;
+  console.log("you are at addRoles function");
+  console.log(deptsID);
+  db.query(`INSERT INTO roles (title, salary, department_id) VALUES ('${rolesInfo.newRolesTitle}', '${rolesInfo.newRolesSalary}', ${deptsID})`, function (err, results) {
+    if (err) {
+      console.log(err);
+      process.exit(1);
+    }
+    renderConsoleTableResults(results);
+    viewEmployee();
+  });
+}
+
 async function addEmployee(employeeInfo) {
   let rolesID = await db.promise().query(`SELECT id FROM roles WHERE title='${employeeInfo.newEmployeeRole}'`);
   rolesID = rolesID[0][0].id;
@@ -156,11 +196,11 @@ async function addEmployee(employeeInfo) {
       process.exit(1);
     }
     renderConsoleTableResults(results);
-    viewEmployee();
+    viewRoles();
   });
 };
 
-//upate roles list function is needed for the add new employee function
+//gets roles list function is needed for the add new employee function
 async function getRolesList() {
   let newRolesList = [];
   let results = await db.promise().query(`SELECT * FROM roles`);
@@ -174,7 +214,7 @@ async function getRolesList() {
 
 }
 
-//update managers list function is needed for the add new employee function
+//gets managers list function is needed for the add new employee function
 //managers are identified as NULL for manager_id in the employee table
 async function getManagerList() {
   let newManagerList = [];
@@ -188,6 +228,27 @@ async function getManagerList() {
   return newManagerList;  
 }
 
+//gets current departments list function is needed for the add new role function
+async function getDeptsList() {
+  let newDeptList = [];
+  let results = await db.promise().query(`SELECT id, title FROM department`);
+  let deptObject = results[0];
+
+  for (let index = 0; index < deptObject.length; index++) {
+    newDeptList.push(deptObject[index].id + " " + deptObject[index].title);   
+  };
+
+  return newDeptList;
+}
+
+//updates the list for departments for the add new role function
+async function updateDeptList(){
+  let updatedDeptList = await getDeptsList();
+  let deptQuestion = rolesAddition[2];
+  deptQuestion.choices = updatedDeptList;
+}
+
+//updates the list for roles and managers for the add new employee function
 async function updateLists() {
   let updatedRolesList = await getRolesList();
   let updatedManagerList = await getManagerList();
