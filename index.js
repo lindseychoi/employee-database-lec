@@ -79,6 +79,19 @@ let employeeAddition = [
   } 
 ]
 
+let updateEmployeeRole = [
+  {
+  type: 'choices',
+  message: 'Which employee would you like to update?',
+  name: 'updateEmployeeName',
+  },
+  {
+  type: 'choices',
+  message: 'What is the employees new role?',
+  name: 'updateEmployeeRole',
+  },
+]
+
 //CONNECTOR INFORMATION/////////////////////////////////////////////////////
 
 const db = mysql.createConnection(
@@ -125,8 +138,14 @@ async function askQuestions() {
     updateDeptList();
     let addRolesAnswer = await inquirer.prompt(rolesAddition);
     let rolesInfo = addRolesAnswer;
-    console.log("you are at the else if in the askQuestions function");
     addRoles(rolesInfo);
+  }
+  else if (userAnswer === "Update an employee role") {
+    updateEmployeeList();
+    updateRoleList();
+    let addUpdatedEmployee = await inquirer.prompt(updateEmployeeRole);
+    let updatedInfo = addUpdatedEmployee;
+    addRoles(updatedInfo);
   }
   else if (userAnswer === "Exit") {
     process.exit(0);
@@ -154,7 +173,12 @@ async function viewRoles() {
 };
 
 async function viewEmployee() {
-  db.query('SELECT * FROM employee', function (err, results) {
+  //use RIGHT JOIN instead and you can do more than one at a time for one SELECT
+  db.query('SELECT employee.first_name, employee.last_name, roles.title as role, roles.salary, department.title as department, manager.first_name as manager_firstname, manager.last_name as manager_lastname \
+    FROM employee \
+    JOIN roles ON employee.roles_id=roles.id \
+    JOIN department ON department.id=roles.department_id \
+    LEFT JOIN employee manager ON employee.manager_id=manager.id', function (err, results) {
     renderConsoleTableResults(results);
   });
 };
@@ -167,17 +191,19 @@ async function addDept(deptInfo) {
 };
 
 async function addRoles(rolesInfo) {
-  let deptsID = await db.promise().query(`SELECT id FROM department WHERE title='${rolesInfo.newRolesDept}'`);
-  deptsID = deptsID[0][0].id;
   console.log("you are at addRoles function");
+  let deptsID = await db.promise().query(`SELECT id FROM department WHERE title='${rolesInfo.newRolesDept}'`);
+
+  deptsID = deptsID[0][0].id;
   console.log(deptsID);
+
   db.query(`INSERT INTO roles (title, salary, department_id) VALUES ('${rolesInfo.newRolesTitle}', '${rolesInfo.newRolesSalary}', ${deptsID})`, function (err, results) {
     if (err) {
       console.log(err);
       process.exit(1);
     }
     renderConsoleTableResults(results);
-    viewEmployee();
+    viewRoles();
   });
 }
 
@@ -196,9 +222,21 @@ async function addEmployee(employeeInfo) {
       process.exit(1);
     }
     renderConsoleTableResults(results);
-    viewRoles();
+    viewEmployee();
   });
 };
+
+//gets the employee list function is needed to update that employee role 
+async function getEmployeeList() {
+  let newEmployeeList = [];
+  let results = await db.promise().query(`SELECT * FROM employee`);
+  let employeeObject = results[0];
+
+  for (let index = 0; index < employeeObject.length; index++) {
+    newEmployeeList.push(employeeObject[index].first_name + " " + employeeObject[index].last_name);
+  };
+  return newEmployeeList;
+}
 
 //gets roles list function is needed for the add new employee function
 async function getRolesList() {
@@ -209,9 +247,7 @@ async function getRolesList() {
   for (let index = 0; index < rolesObject.length; index++) {
     newRolesList.push(rolesObject[index].title);
   };
-
   return newRolesList;
-
 }
 
 //gets managers list function is needed for the add new employee function
@@ -235,17 +271,32 @@ async function getDeptsList() {
   let deptObject = results[0];
 
   for (let index = 0; index < deptObject.length; index++) {
-    newDeptList.push(deptObject[index].id + " " + deptObject[index].title);   
+    newDeptList.push(deptObject[index].title);   
   };
 
   return newDeptList;
 }
 
 //updates the list for departments for the add new role function
-async function updateDeptList(){
+async function updateDeptList() {
   let updatedDeptList = await getDeptsList();
   let deptQuestion = rolesAddition[2];
   deptQuestion.choices = updatedDeptList;
+}
+
+//updates the list for only roles for the update employee function
+async function updateRoleList() {
+  let updatedRoleRoleList = await getRolesList();
+  let rolesrolesQuestion = updateEmployeeRole[1];
+  rolesrolesQuestion.choices = updatedRoleRoleList;
+}
+
+//updates the list for employee first and last name for the update employee function
+async function updateEmployeeList() {
+  let updatedEmployeeList = await getEmployeeList();
+  let employeeQuestion = updatedEmployeeList[0];
+  employeeQuestion.choices = updatedEmployeeList;
+  // console.log(updatedEmployeeList);
 }
 
 //updates the list for roles and managers for the add new employee function
@@ -254,14 +305,10 @@ async function updateLists() {
   let updatedManagerList = await getManagerList();
   let rolesQuestion = employeeAddition[2];
   let managerQuestion = employeeAddition[4];
-  // console.log("Original employeeAddition");
-  // console.log(employeeAddition);
   rolesQuestion.choices = updatedRolesList;
   employeeAddition[2] = rolesQuestion;
   managerQuestion.choices = updatedManagerList;
   employeeAddition[4] = managerQuestion;
-  // console.log("UPDATED employeeAddition");
-  // console.log(employeeAddition);
 }
 
 //LISTENING ON PORT INFO//////////////////////////////////////////////////////
