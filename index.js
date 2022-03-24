@@ -81,12 +81,12 @@ let employeeAddition = [
 
 let updateEmployeeRole = [
   {
-  type: 'choices',
+  type: 'list',
   message: 'Which employee would you like to update?',
   name: 'updateEmployeeName',
   },
   {
-  type: 'choices',
+  type: 'list',
   message: 'What is the employees new role?',
   name: 'updateEmployeeRole',
   },
@@ -111,7 +111,7 @@ async function main() {
 };
 
 async function askQuestions() {
-  
+
   let answer = await inquirer.prompt(firstQuestion); 
   let userAnswer = answer.whatToDo;
   if (userAnswer === "View all departments") {
@@ -141,11 +141,11 @@ async function askQuestions() {
     addRoles(rolesInfo);
   }
   else if (userAnswer === "Update an employee role") {
-    updateEmployeeList();
-    updateRoleList();
+    await updateEmployeeList();
+    await updateRoleList();
     let addUpdatedEmployee = await inquirer.prompt(updateEmployeeRole);
     let updatedInfo = addUpdatedEmployee;
-    addRoles(updatedInfo);
+    await updateEmployee(updatedInfo);
   }
   else if (userAnswer === "Exit") {
     process.exit(0);
@@ -173,7 +173,6 @@ async function viewRoles() {
 };
 
 async function viewEmployee() {
-  //use RIGHT JOIN instead and you can do more than one at a time for one SELECT
   db.query('SELECT employee.first_name, employee.last_name, roles.title as role, roles.salary, department.title as department, manager.first_name as manager_firstname, manager.last_name as manager_lastname \
     FROM employee \
     JOIN roles ON employee.roles_id=roles.id \
@@ -226,10 +225,30 @@ async function addEmployee(employeeInfo) {
   });
 };
 
+//update new role for employee function
+async function updateEmployee(employeeInfo) {
+  let rolesID = await db.promise().query(`SELECT id FROM roles WHERE title='${employeeInfo.updateEmployeeRole}'`);
+  rolesID = rolesID[0][0].id;
+  
+  let employeeFirstName = employeeInfo.updateEmployeeName.split(" ")[0];
+  let employeeLastName = employeeInfo.updateEmployeeName.split(" ")[1];
+  let employeeID = await db.promise().query(`SELECT id FROM employee WHERE first_name='${employeeFirstName}' AND last_name='${employeeLastName}'`);
+  employeeID = employeeID[0][0].id;
+
+  db.query(`UPDATE employee SET roles_id=${rolesID} WHERE id=${employeeID}`, function (err, results) {
+    if (err) {
+      console.log(err);
+      process.exit(1);
+    }
+    renderConsoleTableResults(results);
+    viewEmployee();
+  });
+};
+
 //gets the employee list function is needed to update that employee role 
 async function getEmployeeList() {
   let newEmployeeList = [];
-  let results = await db.promise().query(`SELECT * FROM employee`);
+  let results = await db.promise().query(`SELECT first_name, last_name FROM employee`);
   let employeeObject = results[0];
 
   for (let index = 0; index < employeeObject.length; index++) {
@@ -294,9 +313,9 @@ async function updateRoleList() {
 //updates the list for employee first and last name for the update employee function
 async function updateEmployeeList() {
   let updatedEmployeeList = await getEmployeeList();
-  let employeeQuestion = updatedEmployeeList[0];
+  let employeeQuestion = updateEmployeeRole[0];
   employeeQuestion.choices = updatedEmployeeList;
-  // console.log(updatedEmployeeList);
+  updateEmployeeRole[0] = employeeQuestion;
 }
 
 //updates the list for roles and managers for the add new employee function
